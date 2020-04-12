@@ -5,11 +5,17 @@ using Microsoft.AspNetCore.SpaServices.ReactDevelopmentServer;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using System;
+using System.IO;
+using System.Net.Http.Headers;
+using System.Text;
+using toggl_timeline.Models;
 
 namespace toggl_timeline
 {
     public class Startup
     {
+        private string togglApiKey = null;
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
@@ -20,7 +26,15 @@ namespace toggl_timeline
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            togglApiKey = Configuration["Key:TogglApiKey"];
+            services.Configure<Key>(Configuration.GetSection("Key"));
 
+            services.AddHttpClient("toggl", c =>
+            {
+                c.BaseAddress = new Uri("https://toggl.com/reports/api/v2/");
+                var byteArray = Encoding.ASCII.GetBytes($"{togglApiKey}:{"api_token"}");
+                c.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(byteArray));
+            });
             services.AddControllersWithViews();
 
             // In production, the React files will be served from this directory
