@@ -8,5 +8,6 @@ namespace toggl_timeline.Models
     public class Key
     {
         public string TogglApiKey { get; set; }
+        public string WorkSpaceId { get; set; }
     }
 }
