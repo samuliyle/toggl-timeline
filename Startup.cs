@@ -31,9 +31,7 @@ namespace toggl_timeline
 
             services.AddHttpClient("toggl", c =>
             {
-                c.BaseAddress = new Uri("https://toggl.com/reports/api/v2/");
-                var byteArray = Encoding.ASCII.GetBytes($"{togglApiKey}:{"api_token"}");
-                c.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(byteArray));
+                c.BaseAddress = new Uri("https://toggl.com/");
             });
             services.AddControllersWithViews();
 

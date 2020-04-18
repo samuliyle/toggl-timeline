@@ -5,8 +5,16 @@ using System.Threading.Tasks;
 
 namespace toggl_timeline.Models
 {
+    public class TogglWorkspaces
+    {
+        public int id { get; set; }
+        public string name { get; set; }
+        public DateTime at { get; set; }
+        public string logo_url { get; set; }
+    }
 
-    public class ToggleDetailedReport
+
+    public class TogglDetailedReport
     {
         public int total_count { get; set; }
         public int per_page { get; set; }
