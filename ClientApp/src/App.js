@@ -1,9 +1,6 @@
 import React, { Component } from 'react';
 import { Route } from 'react-router';
 import { Layout } from './components/Layout';
-import { Home } from './components/Home';
-import { FetchData } from './components/FetchData';
-import { Counter } from './components/Counter';
 import Toggl from './components/Toggl';
 
 import './custom.css'
@@ -14,10 +11,7 @@ export default class App extends Component {
   render () {
     return (
       <Layout>
-        <Route exact path='/' component={Home} />
-        <Route path='/counter' component={Counter} />
-        <Route path='/fetch-data' component={FetchData} />
-        <Route path='/toggl1' component={Toggl} />
+        <Route exact path='/' component={Toggl} />
       </Layout>
     );
   }
