@@ -152,6 +152,7 @@ class Toggl extends Component {
 			{ type: 'date', id: 'Start' },
 			{ type: 'date', id: 'End' },
 		];
+		const fontName = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"';
 		return (
 			<div>
 				<Chart
@@ -161,6 +162,12 @@ class Toggl extends Component {
 					loader={<div>Loading Chart</div>}
 					columns={columns}
 					rows={te}
+					options={{
+						timeline: {
+							rowLabelStyle: { fontName: fontName },
+							barLabelStyle: { fontName: fontName }
+						}
+					}}
 					rootProps={{ 'data-testid': '1' }}
 				/>
 			</div>
@@ -200,7 +207,7 @@ class Toggl extends Component {
 								color="primary"
 								fullWidth
 								variant="contained"
-								onClick={() => this.getWorkspaces()} 
+								onClick={() => this.getWorkspaces()}
 								disabled={this.state.loggingIn}
 								className={classes.loginButton}
 							>
@@ -276,7 +283,7 @@ class Toggl extends Component {
 					</Grid>
 					<Grid item xs={12}>
 						<Paper className={classes.paper}>
-							{this.state.loadingActivities 
+							{this.state.loadingActivities
 								? <LinearProgress />
 								: this.renderTogglList()
 							}
@@ -290,7 +297,7 @@ class Toggl extends Component {
 	getWorkspaces() {
 		const apiKey = this.state.apiKey;
 		if (!isEmpty(apiKey)) {
-			this.setState({ loggingIn: true, loadingActivities: true});
+			this.setState({ loggingIn: true, loadingActivities: true });
 			fetch(`Toggl/GetWorkspaces?apiKey=${apiKey}`)
 				.then((resp) => {
 					if (!resp.ok) {
