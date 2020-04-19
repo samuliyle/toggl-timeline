@@ -10,41 +10,16 @@ import Typography from '@material-ui/core/Typography';
 import Divider from '@material-ui/core/Divider';
 import FormGroup from '@material-ui/core/FormGroup';
 import Paper from '@material-ui/core/Paper';
-import Link from '@material-ui/core/Link';
 import Grid from '@material-ui/core/Grid';
 import Box from '@material-ui/core/Box';
-import TextField from '@material-ui/core/TextField';
 import LinearProgress from '@material-ui/core/LinearProgress';
-import CircularProgress from '@material-ui/core/CircularProgress';
-import Container from '@material-ui/core/Container';
-import Avatar from '@material-ui/core/Avatar';
-import LockOutlinedIcon from '@material-ui/icons/LockOutlined';
-import Button from '@material-ui/core/Button';
 import moment from 'moment'
+
+import Login from './Login';
 
 const useStyles = (theme) => ({
 	root: {
 		flexGrow: 1,
-	},
-	rootLogin: {
-		marginTop: theme.spacing(8),
-		display: 'flex',
-		flexDirection: 'column',
-		alignItems: 'center',
-	},
-	loginForm: {
-		width: '100%', // Fix IE 11 issue.
-		marginTop: theme.spacing(1),
-	},
-	loginInput: {
-		marginLeft: theme.spacing(1),
-		flex: 1,
-	},
-	loginButton: {
-		margin: theme.spacing(3, 0, 2),
-	},
-	loginIconButton: {
-		padding: 10,
 	},
 	divider: {
 		height: 28,
@@ -181,64 +156,21 @@ class Toggl extends Component {
 
 	render() {
 		const { classes, loggedIn } = this.props;
+		const { apiKey, loggingIn, loginError } = this.state;
 
 		if (!loggedIn) {
 			return (
-				<Container component="main" maxWidth="xs">
-					<div className={classes.rootLogin}>
-						<Avatar className={classes.avatar}>
-							<LockOutlinedIcon />
-						</Avatar>
-						<Typography component="h1" variant="h5">
-							Sign in
-						</Typography>
-						<Container className={classes.loginForm}>
-							<TextField
-								variant="outlined"
-								margin="normal"
-								required
-								fullWidth
-								name='apiKey'
-								label="apiKey"
-								id="apiKey"
-								autoFocus
-								value={this.state.apiKey}
-								disabled={this.state.loggingIn}
-								onChange={this.handleApiFieldChange}
-								inputProps={{ 'aria-label': 'login with API key' }}
-							/>
-							<Button
-								type="submit"
-								color="primary"
-								fullWidth
-								variant="contained"
-								onClick={() => this.getWorkspaces()}
-								disabled={this.state.loggingIn}
-								className={classes.loginButton}
-							>
-								{this.state.loggingIn && <CircularProgress size={14} />}
-								{!this.state.loggingIn && 'Sign in'}
-							</Button>
-							<Grid container>
-								<Grid item xs={12}>
-									<Link href="https://toggl.com/app/profile" target="_blank" rel="noopener" variant="body2">
-										You can find your API Key in your Toggl profile settings
-								</Link>
-								</Grid>
-								<Grid item xs={12}>
-									<Typography color="error" variant="subtitle1">
-										{this.state.loginError}
-									</Typography>
-								</Grid>
-							</Grid>
-						</Container>
-					</div>
-				</Container>
+				<Login
+					apiKey={apiKey}
+					loggingIn={loggingIn}
+					loginError={loginError}
+					handleApiFieldChange={this.handleApiFieldChange}
+					getWorkspaces={this.getWorkspaces}
+				/>
 			)
 		}
 
 		const currentWorkspace = find(this.state.workspaces, { 'id': this.state.selectedWorkspace });
-		console.log(currentWorkspace);
 
 		if (isNil(currentWorkspace)) {
 			return (
@@ -299,7 +231,7 @@ class Toggl extends Component {
 		);
 	}
 
-	getWorkspaces() {
+	getWorkspaces = () => {
 		const apiKey = this.state.apiKey;
 		if (!isEmpty(apiKey)) {
 			this.setState({ loggingIn: true, loadingActivities: true });
@@ -346,7 +278,7 @@ class Toggl extends Component {
 		}
 	}
 
-	getTogglReport() {
+	getTogglReport = () => {
 		const { apiKey, selectedWorkspace } = this.state;
 		if (!isEmpty(apiKey) && !isNil(selectedWorkspace)) {
 			this.setState({ loadingActivities: true });
