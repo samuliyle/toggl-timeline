@@ -3,8 +3,6 @@ import { Chart } from "react-google-charts";
 import { sumBy, isEmpty, parseInt, isNil, head, find } from "lodash";
 import { withStyles } from '@material-ui/core/styles';
 import Switch from '@material-ui/core/Switch';
-import ScheduleIcon from '@material-ui/icons/Schedule';
-import SnoozeIcon from '@material-ui/icons/Snooze';
 import Card from '@material-ui/core/Card';
 import CardContent from '@material-ui/core/CardContent';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
@@ -16,9 +14,6 @@ import Link from '@material-ui/core/Link';
 import Grid from '@material-ui/core/Grid';
 import Box from '@material-ui/core/Box';
 import TextField from '@material-ui/core/TextField';
-import InputBase from '@material-ui/core/InputBase';
-import IconButton from '@material-ui/core/IconButton';
-import SearchIcon from '@material-ui/icons/Search';
 import LinearProgress from '@material-ui/core/LinearProgress';
 import CircularProgress from '@material-ui/core/CircularProgress';
 import Container from '@material-ui/core/Container';
@@ -81,8 +76,6 @@ const useStyles = (theme) => ({
 		fontSize: 12,
 		color: theme.palette.grey[500],
 		fontWeight: 500,
-		fontFamily:
-			'-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"',
 		margin: 0,
 	},
 	statValue: {
@@ -93,39 +86,51 @@ const useStyles = (theme) => ({
 	},
 	paper: {
 		padding: theme.spacing(2),
-		//    textAlign: 'center',
-		//    color: theme.palette.text.secondary,
 	},
 });
+
+const originalState = {
+	apiKey: '',
+	loggingIn: false,
+	loginError: '',
+	loadingWorkspaces: false,
+	selectedWorkspace: null,
+	workspaces: [],
+	togglData: [],
+	loadingActivities: false,
+	totalTrackedTime: 0,
+	totalIdleTime: 0,
+	showIdle: false,
+	singleLine: false,
+};
 
 class Toggl extends Component {
 	constructor(props) {
 		super(props);
 
-		const apiKey = localStorage.getItem('togglApiKey') || '';
-		let selectedWorkspace = localStorage.getItem('togglWorkspace');
-		selectedWorkspace = selectedWorkspace ? parseInt(selectedWorkspace, 10) : null;
+		const state = { ...originalState };
 
-		this.state = {
-			apiKey: apiKey,
-			loggedIn: false,
-			loggingIn: false,
-			loginError: 'test',
-			loadingWorkspaces: false,
-			selectedWorkspace: selectedWorkspace,
-			workspaces: [],
-			togglData: [],
-			loadingActivities: false,
-			totalTrackedTime: 0,
-			totalIdleTime: 0,
-			showIdle: false,
-			singleLine: false,
-		};
+		state.apiKey = localStorage.getItem('togglApiKey') || '';
+		let selectedWorkspace = localStorage.getItem('togglWorkspace');
+		state.selectedWorkspace = selectedWorkspace ? parseInt(selectedWorkspace, 10) : null;
+
+		this.state = state;
 	}
 
 	static toHourMinuteFormat(time) {
 		const tempTime = moment.duration(time);
 		return `${tempTime.hours()} h ${tempTime.minutes()} min`
+	}
+
+	resetState = () => {
+		this.setState(originalState, () => { console.log(this.state) });
+	}
+
+	setLogStatus = (status) => {
+		if (status === false) {
+			this.resetState();
+		}
+		this.props.setLoggedInStatus(status);
 	}
 
 	handleLineChange = (event) => {
@@ -175,9 +180,9 @@ class Toggl extends Component {
 	}
 
 	render() {
-		const { classes } = this.props;
+		const { classes, loggedIn } = this.props;
 
-		if (!this.state.loggedIn) {
+		if (!loggedIn) {
 			return (
 				<Container component="main" maxWidth="xs">
 					<div className={classes.rootLogin}>
@@ -326,15 +331,17 @@ class Toggl extends Component {
 						localStorage.setItem('togglWorkspace', selectedWorkspace);
 					}
 					localStorage.setItem('togglApiKey', apiKey);
+					this.props.setLoggedInStatus(true);
 					this.setState(
 						{
-							apiKey: apiKey, selectedWorkspace: selectedWorkspace, workspaces: data, loadingWorkspaces: false, loggedIn: true, loadingActivities: true, loggingIn: false
+							apiKey: apiKey, selectedWorkspace: selectedWorkspace, workspaces: data, loadingWorkspaces: false, loadingActivities: true, loggingIn: false
 						}, this.getTogglReport);
 				})
 				.catch((error) => {
 					console.log(error);
 					localStorage.setItem('togglApiKey', '');
-					this.setState({ loggedIn: false, loggingIn: false, loadingWorkspaces: false, apiKey: '', loginError: 'Failed to sign in' });
+					this.props.setLoggedInStatus(false);
+					this.setState({ loggingIn: false, loadingWorkspaces: false, apiKey: '', loginError: 'Failed to sign in' });
 				});
 		}
 	}
