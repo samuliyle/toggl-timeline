@@ -46,26 +46,45 @@ namespace toggl_timeline.Controllers
         }
 
         [HttpGet("GetDetailedReport")]
-        public async Task<ActionResult<TogglDetailedReport>> GetDetailedReport(string apiKey, int workspace)
+        public async Task<ActionResult<List<Data>>> GetDetailedReport(DateTime date, string apiKey, int workspace)
         {
             var url = "/reports/api/v2/details";
             url += $"?workspace_id={workspace}";
-            url += $"&since={DateTime.UtcNow.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture)}";
+            url += $"&since={date.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture)}";
+            url += $"&until={date.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture)}";
             url += "&user_agent=api_test&order_field=date&order_desc=off";
-            var request = new HttpRequestMessage(HttpMethod.Get, url);
-            request.Headers.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.ASCII.GetBytes($"{apiKey}:{"api_token"}")));
-            var client = clientFactory.CreateClient("toggl");
-            var response = await client.SendAsync(request);
+            var totalTogglData = new List<Data>();
+            decimal totalPages;
+            int currentPage = 1;
 
-            if (response.IsSuccessStatusCode)
+            do
             {
-                var content = await response.Content.ReadAsStringAsync();
-                return JsonConvert.DeserializeObject<TogglDetailedReport>(content);
-            }
-            else
-            {
-                throw new Exception();
-            }
+                var nextUrl = url;
+                if (currentPage != 1)
+                {
+                    nextUrl += $"{url}&page={currentPage}";
+                }
+                var request = new HttpRequestMessage(HttpMethod.Get, nextUrl);
+                request.Headers.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.ASCII.GetBytes($"{apiKey}:{"api_token"}")));
+                var client = clientFactory.CreateClient("toggl");
+                var response = await client.SendAsync(request);
+                if (response.IsSuccessStatusCode)
+                {
+                    var content = await response.Content.ReadAsStringAsync();
+                    var data = JsonConvert.DeserializeObject<TogglDetailedReport>(content);
+                    totalPages = Math.Ceiling((data.total_count - totalTogglData.Count()) / (decimal)data.per_page);
+                    totalTogglData.AddRange(data.data);
+                    currentPage++;
+                }
+                else
+                {
+                    // TODO:
+                    throw new Exception();
+                }
+            } while (totalPages > 1);
+
+
+            return totalTogglData;
         }
     }
 }
