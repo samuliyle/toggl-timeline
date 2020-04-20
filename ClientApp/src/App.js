@@ -8,6 +8,8 @@ import AppBar from '@material-ui/core/AppBar';
 import Toolbar from '@material-ui/core/Toolbar';
 import Typography from '@material-ui/core/Typography';
 import Button from '@material-ui/core/Button';
+import { MuiPickersUtilsProvider } from '@material-ui/pickers';
+import MomentUtils from '@date-io/moment';
 
 import './custom.css'
 
@@ -47,25 +49,27 @@ export default function App() {
 	const setLoggedInStatus = (loggedInStatus) => { setLoggedIn(loggedInStatus) }
 
 	return (
-		<ThemeProvider theme={theme}>
-			<div>
-				<div className={classes.root}>
-					<AppBar position="static" className={classes.appBarCustom}>
-						<Toolbar>
-							<Typography variant="h6" className={classes.title}>
-								Toggl timeline
+		<MuiPickersUtilsProvider utils={MomentUtils}>
+			<ThemeProvider theme={theme}>
+				<div>
+					<div className={classes.root}>
+						<AppBar position="static" className={classes.appBarCustom}>
+							<Toolbar>
+								<Typography variant="h6" className={classes.title}>
+									Toggl timeline
 								</Typography>
-							{loggedIn
-								? <Button onClick={() => setLoggedInStatus(false)} color="inherit">Logout</Button>
-								: ''}
+								{loggedIn
+									? <Button onClick={() => setLoggedInStatus(false)} color="inherit">Logout</Button>
+									: ''}
 
-						</Toolbar>
-					</AppBar>
+							</Toolbar>
+						</AppBar>
+					</div>
+					<Container>
+						<Toggl loggedIn={loggedIn} setLoggedInStatus={setLoggedInStatus} />
+					</Container>
 				</div>
-				<Container>
-					<Toggl loggedIn={loggedIn} setLoggedInStatus={setLoggedInStatus} />
-				</Container>
-			</div>
-		</ThemeProvider>
+			</ThemeProvider>
+		</MuiPickersUtilsProvider>
 	);
 }

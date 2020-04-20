@@ -13,6 +13,8 @@ import Paper from '@material-ui/core/Paper';
 import Grid from '@material-ui/core/Grid';
 import Box from '@material-ui/core/Box';
 import LinearProgress from '@material-ui/core/LinearProgress';
+import { DatePicker } from "@material-ui/pickers";
+
 import moment from 'moment'
 
 import Login from './Login';
@@ -70,6 +72,7 @@ const originalState = {
 	loginError: '',
 	loadingWorkspaces: false,
 	selectedWorkspace: null,
+	selectedDate: moment(),
 	workspaces: [],
 	togglData: [],
 	loadingActivities: false,
@@ -113,8 +116,11 @@ class Toggl extends Component {
 	};
 
 	handleApiFieldChange = (event) => {
-		console.log(event);
 		this.setState({ ...this.state, [event.target.name]: event.target.value });
+	};
+
+	handleDateChange = (newDate) => {
+		this.setState({ ...this.state, selectedDate: newDate }, this.getTogglReport);
 	};
 
 	componentDidMount() {
@@ -143,6 +149,9 @@ class Toggl extends Component {
 					columns={columns}
 					rows={te}
 					options={{
+						hAxis: {
+							format: 'HH:mm'
+						},
 						timeline: {
 							rowLabelStyle: { fontName: fontName },
 							barLabelStyle: { fontName: fontName }
@@ -216,6 +225,16 @@ class Toggl extends Component {
 									label="Single line"
 								/>
 							</FormGroup>
+							<DatePicker
+								label="Basic example"
+								name="selectedDate"
+								value={this.state.selectedDate}
+								onChange={this.handleDateChange}
+								animateYearScrolling
+							/>
+							<Typography>
+								{this.state.selectedDate.format('YYYY-MM-DDTHH:mm:ss')}
+							</Typography>
 						</Paper>
 					</Grid>
 					<Grid item xs={12}>
@@ -279,10 +298,11 @@ class Toggl extends Component {
 	}
 
 	getTogglReport = () => {
-		const { apiKey, selectedWorkspace } = this.state;
+		const { apiKey, selectedWorkspace, selectedDate } = this.state;
 		if (!isEmpty(apiKey) && !isNil(selectedWorkspace)) {
 			this.setState({ loadingActivities: true });
-			fetch(`Toggl/GetDetailedReport?apiKey=${apiKey}&workspace=${selectedWorkspace}`)
+			const today = selectedDate.format('YYYY-MM-DDTHH:mm:ss');
+			fetch(`Toggl/GetDetailedReport?date=${today}&apiKey=${apiKey}&workspace=${selectedWorkspace}`)
 				.then((resp) => {
 					if (!resp.ok) {
 						return Promise.reject(resp);
@@ -291,16 +311,16 @@ class Toggl extends Component {
 				})
 				.then((data) => {
 					console.log(data);
-					const totalTracked = sumBy(data.data, 'dur');
+					const totalTracked = sumBy(data, 'dur');
 					let totalIdle = 0;
-					for (let i = 0; i < data.data.length; i++) {
-						if (i + 1 !== data.data.length) {
-							const endOfFirst = moment(data.data[i].end);
-							const startOfFollowing = moment(data.data[i + 1].start);
+					for (let i = 0; i < data.length; i++) {
+						if (i + 1 !== data.length) {
+							const endOfFirst = moment(data[i].end);
+							const startOfFollowing = moment(data[i + 1].start);
 							totalIdle += moment.duration(startOfFollowing.diff(endOfFirst)).asMilliseconds();
 						}
 					}
-					this.setState({ togglData: data.data, totalIdleTime: totalIdle, totalTrackedTime: totalTracked, loadingActivities: false });
+					this.setState({ togglData: data, totalIdleTime: totalIdle, totalTrackedTime: totalTracked, loadingActivities: false });
 				})
 				.catch((error) => {
 					console.log(error);
