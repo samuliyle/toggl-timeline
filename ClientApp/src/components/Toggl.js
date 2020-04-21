@@ -5,10 +5,12 @@ import { withStyles } from '@material-ui/core/styles';
 import Switch from '@material-ui/core/Switch';
 import Card from '@material-ui/core/Card';
 import CardContent from '@material-ui/core/CardContent';
-import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Typography from '@material-ui/core/Typography';
 import Divider from '@material-ui/core/Divider';
-import FormGroup from '@material-ui/core/FormGroup';
+import IconButton from '@material-ui/core/IconButton';
+import ArrowBackIosIcon from '@material-ui/icons/ArrowBackIos';
+import ArrowForwardIosIcon from '@material-ui/icons/ArrowForwardIos';
+import ButtonGroup from '@material-ui/core/ButtonGroup';
 import Paper from '@material-ui/core/Paper';
 import Grid from '@material-ui/core/Grid';
 import Box from '@material-ui/core/Box';
@@ -26,6 +28,9 @@ const useStyles = (theme) => ({
 	divider: {
 		height: 28,
 		margin: 4,
+	},
+	timelineContainer: {
+		marginTop: 5,
 	},
 	card: {
 		borderRadius: 12,
@@ -49,6 +54,12 @@ const useStyles = (theme) => ({
 		color: theme.palette.grey[500],
 		marginBottom: '0.875em',
 	},
+	dateArrow: {
+		paddingTop: 7,
+	},
+	statContainer: {
+		paddingTop: 16,
+	},
 	statLabel: {
 		fontSize: 12,
 		color: theme.palette.grey[500],
@@ -59,10 +70,12 @@ const useStyles = (theme) => ({
 		fontSize: 20,
 		fontWeight: 'bold',
 		marginBottom: 4,
+		fontFamily: 'Fira Sans, sans-serif',
 		letterSpacing: '1px',
 	},
 	paper: {
 		padding: theme.spacing(2),
+		boxShadow: '0 2px 4px -2px rgba(0,0,0,0.24), 0 4px 10px -2px rgba(0, 0, 0, 0.2)',
 	},
 });
 
@@ -123,6 +136,17 @@ class Toggl extends Component {
 		this.setState({ ...this.state, selectedDate: newDate }, this.getTogglReport);
 	};
 
+	handleDateArrowChange = (amountOfDays) => {
+		const { selectedDate, loadingActivities } = this.state;
+		if (!loadingActivities) {
+			const nextDate = moment(selectedDate);
+			nextDate.add(amountOfDays, 'day');
+			if (!nextDate.isAfter(moment(), 'day')) {
+				this.setState({ selectedDate: nextDate }, this.getTogglReport);
+			}
+		}
+	}
+
 	componentDidMount() {
 		if (!isEmpty(this.state.apiKey)) {
 			this.getWorkspaces();
@@ -130,7 +154,17 @@ class Toggl extends Component {
 	}
 
 	renderTogglList() {
-		const te = this.state.togglData.map((toggl) => [(this.state.singleLine ? 'Toggl' : toggl.description), toggl.description, new Date(toggl.start), new Date(toggl.end)]);
+		const { togglData } = this.state;
+
+		if (isEmpty(togglData)) {
+			return (<div>
+				<Typography>
+					oh heck
+				</Typography>
+			</div>)
+		}
+
+		const te = togglData.map((toggl) => [(this.state.singleLine ? 'Toggl' : toggl.description), toggl.description, new Date(toggl.start), new Date(toggl.end)]);
 		console.log(te);
 		const columns = [
 			{ type: 'string', id: 'Toggl' },
@@ -204,11 +238,12 @@ class Toggl extends Component {
 									</span>
 								</CardContent>
 								<Divider light />
-								<Box display={'flex'}>
+								<Box display={'flex'} className={classes.statContainer}>
 									<Box p={2} flex={'auto'}>
 										<p className={classes.statLabel}>Tracked time</p>
 										<p className={classes.statValue}>{Toggl.toHourMinuteFormat(this.state.totalTrackedTime)}</p>
 									</Box>
+									<Divider light variant="middle" orientation="vertical" flexItem />
 									<Box p={2} flex={'auto'}>
 										<p className={classes.statLabel}>Idle time</p>
 										<p className={classes.statValue}>{Toggl.toHourMinuteFormat(this.state.totalIdleTime)}</p>
@@ -219,30 +254,38 @@ class Toggl extends Component {
 					</Grid>
 					<Grid item xs={12}>
 						<Paper className={classes.paper}>
-							<FormGroup row>
-								<FormControlLabel
-									control={<Switch checked={this.state.singleLine} onChange={this.handleLineChange} name="singleLine" />}
-									label="Single line"
-								/>
-							</FormGroup>
-							<DatePicker
-								label="Basic example"
-								name="selectedDate"
-								value={this.state.selectedDate}
-								onChange={this.handleDateChange}
-								animateYearScrolling
-							/>
-							<Typography>
-								{this.state.selectedDate.format('YYYY-MM-DDTHH:mm:ss')}
-							</Typography>
-						</Paper>
-					</Grid>
-					<Grid item xs={12}>
-						<Paper className={classes.paper}>
-							{this.state.loadingActivities
-								? <LinearProgress />
-								: this.renderTogglList()
-							}
+							<Card className={classes.card} elevation={0}>
+								<Box display={'flex'}>
+									<Box p={2} flex={'auto'}>
+										<p className={classes.statLabel}>Tracked time</p>
+										<Switch checked={this.state.singleLine} onChange={this.handleLineChange} name="singleLine" />
+									</Box>
+									<Divider variant="middle" orientation="vertical" flexItem />
+									<Box p={2} flex={'auto'}>
+										<p className={classes.statLabel}>Idle time</p>
+										<IconButton className={classes.dateArrow} onClick={() => { this.handleDateArrowChange(-1) }}>
+											<ArrowBackIosIcon />
+										</IconButton>
+										<DatePicker
+											disableFuture
+											name="selectedDate"
+											value={this.state.selectedDate}
+											onChange={this.handleDateChange}
+											animateYearScrolling
+										/>
+										<IconButton className={classes.dateArrow} onClick={() => { this.handleDateArrowChange(1) }}>
+											<ArrowForwardIosIcon />
+										</IconButton>
+									</Box>
+								</Box>
+							</Card>
+							<Divider light />
+							<div className={classes.timelineContainer}>
+								{this.state.loadingActivities
+									? <LinearProgress />
+									: this.renderTogglList()
+								}
+							</div>
 						</Paper>
 					</Grid>
 				</Grid>

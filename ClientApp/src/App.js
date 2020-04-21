@@ -14,6 +14,11 @@ import MomentUtils from '@date-io/moment';
 import './custom.css'
 
 const theme = createMuiTheme({
+	palette: {
+		primary: {
+			main: '#2196F3',
+		},
+	},
 	typography: {
 		fontFamily: [
 			'-apple-system',
@@ -39,6 +44,7 @@ const useStyles = makeStyles({
 	},
 	appBarCustom: {
 		background: 'linear-gradient(45deg, #2196F3 50%, #07bae4 90%)',
+		marginBottom: 7,
 	}
 });
 
