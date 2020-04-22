@@ -1,6 +1,6 @@
 ﻿import React, { Component } from 'react';
 import { Chart } from "react-google-charts";
-import { sumBy, isEmpty, parseInt, isNil, head, find } from "lodash";
+import { sumBy, isEmpty, parseInt, isNil, head, find, map, size } from "lodash";
 import { withStyles } from '@material-ui/core/styles';
 import Switch from '@material-ui/core/Switch';
 import Card from '@material-ui/core/Card';
@@ -10,12 +10,17 @@ import Divider from '@material-ui/core/Divider';
 import IconButton from '@material-ui/core/IconButton';
 import ArrowBackIosIcon from '@material-ui/icons/ArrowBackIos';
 import ArrowForwardIosIcon from '@material-ui/icons/ArrowForwardIos';
-import ButtonGroup from '@material-ui/core/ButtonGroup';
 import Paper from '@material-ui/core/Paper';
 import Grid from '@material-ui/core/Grid';
 import Box from '@material-ui/core/Box';
 import LinearProgress from '@material-ui/core/LinearProgress';
 import { DatePicker } from "@material-ui/pickers";
+import AppBar from '@material-ui/core/AppBar';
+import Toolbar from '@material-ui/core/Toolbar';
+import Button from '@material-ui/core/Button';
+import Container from '@material-ui/core/Container';
+import Select from '@material-ui/core/Select';
+import MenuItem from '@material-ui/core/MenuItem';
 
 import moment from 'moment'
 
@@ -30,7 +35,7 @@ const useStyles = (theme) => ({
 		margin: 4,
 	},
 	timelineContainer: {
-		marginTop: 5,
+		marginTop: 10,
 	},
 	card: {
 		borderRadius: 12,
@@ -77,10 +82,32 @@ const useStyles = (theme) => ({
 		padding: theme.spacing(2),
 		boxShadow: '0 2px 4px -2px rgba(0,0,0,0.24), 0 4px 10px -2px rgba(0, 0, 0, 0.2)',
 	},
+	title: {
+		flexGrow: 1,
+	},
+	appBarCustom: {
+		background: 'linear-gradient(45deg, #2196F3 50%, #07bae4 90%)',
+		marginBottom: 7,
+	},
+	workspaceDropdown: {
+		color: 'white',
+		marginRight: 5,
+		lineHeight: 1.75,
+		'&:before': {
+			borderColor: 'white',
+		},
+		'&:after': {
+			borderColor: 'white',
+		}
+	},
+	workspaceDropdownIcon: {
+		fill: 'white',
+	},
 });
 
 const originalState = {
 	apiKey: '',
+	loggedIn: false,
 	loggingIn: false,
 	loginError: '',
 	loadingWorkspaces: false,
@@ -120,8 +147,9 @@ class Toggl extends Component {
 	setLogStatus = (status) => {
 		if (status === false) {
 			this.resetState();
+		} else {
+			this.setState({ loggedIn: true });
 		}
-		this.props.setLoggedInStatus(status);
 	}
 
 	handleLineChange = (event) => {
@@ -134,6 +162,10 @@ class Toggl extends Component {
 
 	handleDateChange = (newDate) => {
 		this.setState({ ...this.state, selectedDate: newDate }, this.getTogglReport);
+	};
+
+	handleWorkspaceChange = (event) => {
+		this.setState({ ...this.state, selectedWorkspace: event.target.value }, this.getTogglReport);
 	};
 
 	handleDateArrowChange = (amountOfDays) => {
@@ -198,11 +230,13 @@ class Toggl extends Component {
 	}
 
 	render() {
-		const { classes, loggedIn } = this.props;
-		const { apiKey, loggingIn, loginError } = this.state;
+		const { classes } = this.props;
+		const { apiKey, loggingIn, loginError, loggedIn, workspaces, selectedWorkspace } = this.state;
+		let content = null;
+		let loggedinAppBarContent = '';
 
 		if (!loggedIn) {
-			return (
+			content = (
 				<Login
 					apiKey={apiKey}
 					loggingIn={loggingIn}
@@ -210,85 +244,138 @@ class Toggl extends Component {
 					handleApiFieldChange={this.handleApiFieldChange}
 					getWorkspaces={this.getWorkspaces}
 				/>
-			)
+			);
 		}
 
-		const currentWorkspace = find(this.state.workspaces, { 'id': this.state.selectedWorkspace });
+		if (isNil(content)) {
+			const currentWorkspace = find(workspaces, { 'id': selectedWorkspace });
 
-		if (isNil(currentWorkspace)) {
-			return (
-				<Typography color="error" variant="subtitle1">
-					No workspaces found
-				</Typography>
-			)
+			if (isNil(currentWorkspace)) {
+				content = (
+					<Typography color="error" variant="subtitle1">
+						No workspaces found
+					</Typography>
+				);
+			} else {
+				let workspaceSelect = '';
+				if (size(workspaces) > 1) {
+					const workSpaceMenuItems = map(workspaces, (workspace) => {
+						return (<MenuItem key={workspace.id} value={workspace.id}>{workspace.name}</MenuItem>)
+					})
+					workspaceSelect = (
+						<Select
+							className={classes.workspaceDropdown}
+							value={selectedWorkspace}
+							disableUnderline
+							inputProps={{
+								classes: {
+									icon: classes.workspaceDropdownIcon,
+								},
+							}}
+							onChange={this.handleWorkspaceChange}
+						>
+							{workSpaceMenuItems}
+						</Select>
+					);
+				}
+
+				loggedinAppBarContent = (
+					<div>
+						{workspaceSelect}
+						<Button onClick={() => this.setLogStatus(false)} color="inherit">Logout</Button>
+					</div>
+				)
+
+				content = (
+					<Grid container spacing={3}>
+						<Grid item xs={12}>
+							<Paper className={classes.paper}>
+								<Card className={classes.card} elevation={0}>
+									<CardContent>
+										<Typography className={classes.heading} variant="h3">
+											{currentWorkspace.name}
+										</Typography>
+										<span className={classes.subheader}>
+											{moment(currentWorkspace.at).format('LL')}
+										</span>
+									</CardContent>
+									<Divider light />
+									<Box display={'flex'} className={classes.statContainer}>
+										<Box p={2} flex={'auto'}>
+											<p className={classes.statLabel}>Tracked time</p>
+											<p className={classes.statValue}>{Toggl.toHourMinuteFormat(this.state.totalTrackedTime)}</p>
+										</Box>
+										<Divider light variant="middle" orientation="vertical" flexItem />
+										<Box p={2} flex={'auto'}>
+											<p className={classes.statLabel}>Idle time</p>
+											<p className={classes.statValue}>{Toggl.toHourMinuteFormat(this.state.totalIdleTime)}</p>
+										</Box>
+									</Box>
+								</Card>
+							</Paper>
+						</Grid>
+						<Grid item xs={12}>
+							<Paper className={classes.paper}>
+								<Card className={classes.card} elevation={0}>
+									<Grid container spacing={3}>
+										<Grid item sm={3} xs={12}>
+											<p className={classes.statLabel}>Single line</p>
+											<Switch
+												checked={this.state.singleLine}
+												onChange={this.handleLineChange}
+												color="primary"
+												name="singleLine" />
+										</Grid>
+										<Grid item sm={6} xs={12}>
+											<p className={classes.statLabel}>Date</p>
+											<IconButton className={classes.dateArrow} onClick={() => { this.handleDateArrowChange(-1) }}>
+												<ArrowBackIosIcon />
+											</IconButton>
+											<DatePicker
+												disableFuture
+												name="selectedDate"
+												value={this.state.selectedDate}
+												onChange={this.handleDateChange}
+												animateYearScrolling
+											/>
+											<IconButton className={classes.dateArrow} onClick={() => { this.handleDateArrowChange(1) }}>
+												<ArrowForwardIosIcon />
+											</IconButton>
+										</Grid>
+										<Grid item sm={3} xs={12}>
+											<p className={classes.statLabel}>Third setting</p>
+										</Grid>
+									</Grid>
+								</Card>
+								<Divider light />
+								<div className={classes.timelineContainer}>
+									{this.state.loadingActivities
+										? <LinearProgress />
+										: this.renderTogglList()
+									}
+								</div>
+							</Paper>
+						</Grid>
+					</Grid>
+				);
+			}
 		}
 
 		return (
-			<div className={classes.root}>
-				<Grid container spacing={3}>
-					<Grid item xs={12}>
-						<Paper className={classes.paper}>
-							<Card className={classes.card} elevation={0}>
-								<CardContent>
-									<Typography className={classes.heading} variant="h3">
-										{currentWorkspace.name}
-									</Typography>
-									<span className={classes.subheader}>
-										{moment(currentWorkspace.at).format('LL')}
-									</span>
-								</CardContent>
-								<Divider light />
-								<Box display={'flex'} className={classes.statContainer}>
-									<Box p={2} flex={'auto'}>
-										<p className={classes.statLabel}>Tracked time</p>
-										<p className={classes.statValue}>{Toggl.toHourMinuteFormat(this.state.totalTrackedTime)}</p>
-									</Box>
-									<Divider light variant="middle" orientation="vertical" flexItem />
-									<Box p={2} flex={'auto'}>
-										<p className={classes.statLabel}>Idle time</p>
-										<p className={classes.statValue}>{Toggl.toHourMinuteFormat(this.state.totalIdleTime)}</p>
-									</Box>
-								</Box>
-							</Card>
-						</Paper>
-					</Grid>
-					<Grid item xs={12}>
-						<Paper className={classes.paper}>
-							<Card className={classes.card} elevation={0}>
-								<Box display={'flex'}>
-									<Box p={2} flex={'auto'}>
-										<p className={classes.statLabel}>Tracked time</p>
-										<Switch checked={this.state.singleLine} onChange={this.handleLineChange} name="singleLine" />
-									</Box>
-									<Divider variant="middle" orientation="vertical" flexItem />
-									<Box p={2} flex={'auto'}>
-										<p className={classes.statLabel}>Idle time</p>
-										<IconButton className={classes.dateArrow} onClick={() => { this.handleDateArrowChange(-1) }}>
-											<ArrowBackIosIcon />
-										</IconButton>
-										<DatePicker
-											disableFuture
-											name="selectedDate"
-											value={this.state.selectedDate}
-											onChange={this.handleDateChange}
-											animateYearScrolling
-										/>
-										<IconButton className={classes.dateArrow} onClick={() => { this.handleDateArrowChange(1) }}>
-											<ArrowForwardIosIcon />
-										</IconButton>
-									</Box>
-								</Box>
-							</Card>
-							<Divider light />
-							<div className={classes.timelineContainer}>
-								{this.state.loadingActivities
-									? <LinearProgress />
-									: this.renderTogglList()
-								}
-							</div>
-						</Paper>
-					</Grid>
-				</Grid>
+			<div>
+				<div className={classes.root}>
+					<AppBar position="static" className={classes.appBarCustom}>
+						<Toolbar>
+							<Typography variant="h6" className={classes.title}>
+								Toggl timeline
+								</Typography>
+							{loggedinAppBarContent}
+						</Toolbar>
+					</AppBar>
+				</div>
+				<Container className={classes.root}>
+					{content}
+				</Container>
 			</div>
 		);
 	}
@@ -325,17 +412,15 @@ class Toggl extends Component {
 						localStorage.setItem('togglWorkspace', selectedWorkspace);
 					}
 					localStorage.setItem('togglApiKey', apiKey);
-					this.props.setLoggedInStatus(true);
 					this.setState(
 						{
-							apiKey: apiKey, selectedWorkspace: selectedWorkspace, workspaces: data, loadingWorkspaces: false, loadingActivities: true, loggingIn: false
+							loggedIn: true, apiKey: apiKey, selectedWorkspace: selectedWorkspace, workspaces: data, loadingWorkspaces: false, loadingActivities: true, loggingIn: false
 						}, this.getTogglReport);
 				})
 				.catch((error) => {
 					console.log(error);
 					localStorage.setItem('togglApiKey', '');
-					this.props.setLoggedInStatus(false);
-					this.setState({ loggingIn: false, loadingWorkspaces: false, apiKey: '', loginError: 'Failed to sign in' });
+					this.setState({ loggedIn: false, loggingIn: false, loadingWorkspaces: false, apiKey: '', loginError: 'Failed to sign in' });
 				});
 		}
 	}
