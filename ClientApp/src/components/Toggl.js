@@ -1,6 +1,6 @@
 ﻿import React, { Component } from 'react';
 import { Chart } from "react-google-charts";
-import { sumBy, isEmpty, parseInt, isNil, head, find, map, size } from "lodash";
+import { sumBy, isEmpty, parseInt, isNil, head, find, map, size, concat, forEach } from "lodash";
 import { withStyles } from '@material-ui/core/styles';
 import Switch from '@material-ui/core/Switch';
 import Card from '@material-ui/core/Card';
@@ -35,7 +35,7 @@ const useStyles = (theme) => ({
 		margin: 4,
 	},
 	timelineContainer: {
-		marginTop: 10,
+		marginTop: 15,
 	},
 	card: {
 		borderRadius: 12,
@@ -77,6 +77,13 @@ const useStyles = (theme) => ({
 		marginBottom: 4,
 		fontFamily: 'Fira Sans, sans-serif',
 		letterSpacing: '1px',
+	},
+	settingsLabel: {
+		fontSize: 12,
+		color: theme.palette.grey[650],
+		fontWeight: 500,
+		margin: 0,
+		marginBottom: 2,
 	},
 	paper: {
 		padding: theme.spacing(2),
@@ -152,7 +159,7 @@ class Toggl extends Component {
 		}
 	}
 
-	handleLineChange = (event) => {
+	handleSwitchChange = (event) => {
 		this.setState({ ...this.state, [event.target.name]: event.target.checked });
 	};
 
@@ -186,7 +193,7 @@ class Toggl extends Component {
 	}
 
 	renderTogglList() {
-		const { togglData } = this.state;
+		const { togglData, showIdle } = this.state;
 
 		if (isEmpty(togglData)) {
 			return (<div>
@@ -196,8 +203,13 @@ class Toggl extends Component {
 			</div>)
 		}
 
-		const te = togglData.map((toggl) => [(this.state.singleLine ? 'Toggl' : toggl.description), toggl.description, new Date(toggl.start), new Date(toggl.end)]);
-		console.log(te);
+		const timelineData = [];
+		forEach(togglData, (toggl) => {
+			if (!showIdle && toggl.project === 'CreatedIdleProject') {
+				return;
+			} 
+			timelineData.push([(this.state.singleLine ? 'Toggl' : toggl.description), toggl.description, new Date(toggl.start), new Date(toggl.end)]);
+		});
 		const columns = [
 			{ type: 'string', id: 'Toggl' },
 			{ type: 'string', id: 'Description' },
@@ -213,7 +225,7 @@ class Toggl extends Component {
 					chartType="Timeline"
 					loader={<div>Loading Chart</div>}
 					columns={columns}
-					rows={te}
+					rows={timelineData}
 					options={{
 						hAxis: {
 							format: 'HH:mm'
@@ -319,15 +331,15 @@ class Toggl extends Component {
 								<Card className={classes.card} elevation={0}>
 									<Grid container spacing={3}>
 										<Grid item sm={3} xs={12}>
-											<p className={classes.statLabel}>Single line</p>
+											<p className={classes.settingsLabel}>Group all together</p>
 											<Switch
 												checked={this.state.singleLine}
-												onChange={this.handleLineChange}
+												onChange={this.handleSwitchChange}
 												color="primary"
 												name="singleLine" />
 										</Grid>
 										<Grid item sm={6} xs={12}>
-											<p className={classes.statLabel}>Date</p>
+											<p className={classes.settingsLabel}>Date</p>
 											<IconButton className={classes.dateArrow} onClick={() => { this.handleDateArrowChange(-1) }}>
 												<ArrowBackIosIcon />
 											</IconButton>
@@ -343,7 +355,12 @@ class Toggl extends Component {
 											</IconButton>
 										</Grid>
 										<Grid item sm={3} xs={12}>
-											<p className={classes.statLabel}>Third setting</p>
+											<p className={classes.settingsLabel}>Create idle category</p>
+											<Switch
+												checked={this.state.showIdle}
+												onChange={this.handleSwitchChange}
+												color="primary"
+												name="showIdle" />
 										</Grid>
 									</Grid>
 								</Card>
@@ -441,14 +458,28 @@ class Toggl extends Component {
 					console.log(data);
 					const totalTracked = sumBy(data, 'dur');
 					let totalIdle = 0;
+					const idleActivities = [];
 					for (let i = 0; i < data.length; i++) {
 						if (i + 1 !== data.length) {
 							const endOfFirst = moment(data[i].end);
 							const startOfFollowing = moment(data[i + 1].start);
-							totalIdle += moment.duration(startOfFollowing.diff(endOfFirst)).asMilliseconds();
+							if (startOfFollowing.isAfter(endOfFirst)) {
+								const idleDuration = moment.duration(startOfFollowing.diff(endOfFirst)).asMilliseconds();
+								totalIdle += idleDuration;
+								idleActivities.push({
+									start: endOfFirst.format(),
+									end: startOfFollowing.format(),
+									dur: idleDuration,
+									id: i,
+									description: 'Idle',
+									project: 'CreatedIdleProject',
+									tags: [],
+									user: '',
+								});
+							}
 						}
 					}
-					this.setState({ togglData: data, totalIdleTime: totalIdle, totalTrackedTime: totalTracked, loadingActivities: false });
+					this.setState({ togglData: concat(data, idleActivities), totalIdleTime: totalIdle, totalTrackedTime: totalTracked, loadingActivities: false });
 				})
 				.catch((error) => {
 					console.log(error);
