@@ -62,6 +62,9 @@ const useStyles = (theme) => ({
 	dateArrow: {
 		paddingTop: 7,
 	},
+	errorMessage: {
+		textAlign: 'center',
+	},
 	statContainer: {
 		paddingTop: 16,
 	},
@@ -172,6 +175,7 @@ class Toggl extends Component {
 	};
 
 	handleWorkspaceChange = (event) => {
+		localStorage.setItem('togglWorkspace', event.target.value);
 		this.setState({ ...this.state, selectedWorkspace: event.target.value }, this.getTogglReport);
 	};
 
@@ -193,12 +197,13 @@ class Toggl extends Component {
 	}
 
 	renderTogglList() {
-		const { togglData, showIdle } = this.state;
+		const { classes } = this.props;
+		const { togglData, showIdle, singleLine } = this.state;
 
 		if (isEmpty(togglData)) {
 			return (<div>
-				<Typography>
-					oh heck
+				<Typography className={classes.errorMessage}>
+					No data found for this date
 				</Typography>
 			</div>)
 		}
@@ -208,7 +213,7 @@ class Toggl extends Component {
 			if (!showIdle && toggl.project === 'CreatedIdleProject') {
 				return;
 			} 
-			timelineData.push([(this.state.singleLine ? 'Toggl' : toggl.description), toggl.description, new Date(toggl.start), new Date(toggl.end)]);
+			timelineData.push([(singleLine ? 'Toggl' : toggl.description), toggl.description, new Date(toggl.start), new Date(toggl.end)]);
 		});
 		const columns = [
 			{ type: 'string', id: 'Toggl' },
