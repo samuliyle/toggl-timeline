@@ -31,6 +31,9 @@ const useStyles = (theme) => ({
 	loginIconButton: {
 		padding: 10,
 	},
+	errorMessage: {
+		textAlign: 'center',
+	}
 });
 
 class Login extends Component {
@@ -81,7 +84,7 @@ class Login extends Component {
 								</Link>
 							</Grid>
 							<Grid item xs={12}>
-								<Typography color="error" variant="subtitle1">
+								<Typography color="error" variant="subtitle1" className={classes.errorMessage}>
 									{loginError}
 								</Typography>
 							</Grid>

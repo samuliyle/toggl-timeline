@@ -18,12 +18,10 @@ namespace toggl_timeline.Controllers
     public class TogglController : ControllerBase
     {
         private readonly IHttpClientFactory clientFactory;
-        private readonly Key ApiKeys;
 
-        public TogglController(IHttpClientFactory clientFactory, IOptions<Key> apiKeys)
+        public TogglController(IHttpClientFactory clientFactory)
         {
             this.clientFactory = clientFactory;
-            ApiKeys = apiKeys.Value;
         }
 
         [HttpGet("GetWorkspaces")]
@@ -78,8 +76,7 @@ namespace toggl_timeline.Controllers
                 }
                 else
                 {
-                    // TODO:
-                    throw new Exception();
+                    throw new HttpRequestException(response.ReasonPhrase);
                 }
             } while (totalPages > 1);
 

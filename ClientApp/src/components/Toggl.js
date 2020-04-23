@@ -21,6 +21,7 @@ import Button from '@material-ui/core/Button';
 import Container from '@material-ui/core/Container';
 import Select from '@material-ui/core/Select';
 import MenuItem from '@material-ui/core/MenuItem';
+import RefreshIcon from '@material-ui/icons/Refresh';
 
 import moment from 'moment'
 
@@ -64,6 +65,11 @@ const useStyles = (theme) => ({
 	},
 	errorMessage: {
 		textAlign: 'center',
+	},
+	reloadIconButton: {
+		'& svg': {
+			fontSize: 48
+		}
 	},
 	statContainer: {
 		paddingTop: 16,
@@ -126,6 +132,7 @@ const originalState = {
 	workspaces: [],
 	togglData: [],
 	loadingActivities: false,
+	loadingActivitiesError: '',
 	totalTrackedTime: 0,
 	totalIdleTime: 0,
 	showIdle: false,
@@ -198,21 +205,39 @@ class Toggl extends Component {
 
 	renderTogglList() {
 		const { classes } = this.props;
-		const { togglData, showIdle, singleLine } = this.state;
+		const { togglData, showIdle, singleLine, loadingActivitiesError } = this.state;
 
 		if (isEmpty(togglData)) {
-			return (<div>
+			if (!isEmpty(loadingActivitiesError)) {
+				return (
+					<div className={classes.errorMessage}>
+						<Typography color={'error'} className={classes.errorMessage}>
+							{loadingActivitiesError}
+						</Typography>
+						<br />
+						<IconButton
+							className={classes.reloadIconButton}
+							color="primary"
+							onClick={() => this.getTogglReport() }
+							aria-label="reload toggl data">
+							<RefreshIcon />
+						</IconButton>
+					</div>
+				);
+			}
+
+			return (
 				<Typography className={classes.errorMessage}>
-					No data found for this date
+					{'No data found for this date'}
 				</Typography>
-			</div>)
+			)
 		}
 
 		const timelineData = [];
 		forEach(togglData, (toggl) => {
 			if (!showIdle && toggl.project === 'CreatedIdleProject') {
 				return;
-			} 
+			}
 			timelineData.push([(singleLine ? 'Toggl' : toggl.description), toggl.description, new Date(toggl.start), new Date(toggl.end)]);
 		});
 		const columns = [
@@ -414,21 +439,18 @@ class Toggl extends Component {
 					return resp.json();
 				})
 				.then((data) => {
-					console.log(data);
 					let selectedWorkspace = this.state.selectedWorkspace;
-					console.log(selectedWorkspace);
 					if (!isEmpty(data)) {
+						// Does selected workspace exist
 						if (!isNil(selectedWorkspace)) {
-							console.log('existing found');
 							const workspace = find(data, { 'id': selectedWorkspace });
-							console.log({ workspace });
 							if (!isNil(workspace)) {
-								console.log('existing ok');
+								// Selected work space exists
 								selectedWorkspace = workspace.id;
 							}
 						}
 						if (isNil(selectedWorkspace)) {
-							console.log('no existing. selected head')
+							// No existing selected workspace, pick first workspace
 							selectedWorkspace = head(data).id;
 						}
 						localStorage.setItem('togglWorkspace', selectedWorkspace);
@@ -439,8 +461,7 @@ class Toggl extends Component {
 							loggedIn: true, apiKey: apiKey, selectedWorkspace: selectedWorkspace, workspaces: data, loadingWorkspaces: false, loadingActivities: true, loggingIn: false
 						}, this.getTogglReport);
 				})
-				.catch((error) => {
-					console.log(error);
+				.catch(() => {
 					localStorage.setItem('togglApiKey', '');
 					this.setState({ loggedIn: false, loggingIn: false, loadingWorkspaces: false, apiKey: '', loginError: 'Failed to sign in' });
 				});
@@ -484,12 +505,10 @@ class Toggl extends Component {
 							}
 						}
 					}
-					this.setState({ togglData: concat(data, idleActivities), totalIdleTime: totalIdle, totalTrackedTime: totalTracked, loadingActivities: false });
+					this.setState({ loadingActivitiesError: '', togglData: concat(data, idleActivities), totalIdleTime: totalIdle, totalTrackedTime: totalTracked, loadingActivities: false });
 				})
-				.catch((error) => {
-					console.log(error);
-					// TODO: error msg
-					this.setState({ loadingActivities: false });
+				.catch(() => {
+					this.setState({ loadingActivities: false, loadingActivitiesError: 'Failed to load data' });
 				});
 		}
 	}
